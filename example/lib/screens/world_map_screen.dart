@@ -12,14 +12,17 @@ class WorldMapScreen extends StatelessWidget {
         children: [
           Expanded(
             child: InteractiveMap(
+              
+              onCountryHovered: (code) {
+                print("$code hovered.");
+              },
+              onCountrySelected: (code) {              
+                print("$code selected.");
+              },
               MapEntity.world,
-              theme: InteractiveMapTheme(
-                borderWidth: 1,
-                backgroundColor: Colors.blue.shade800,
-                borderColor: Colors.black26,
-                defaultCountryColor: Colors.orange.shade200,
-              ),
-              initialScale: 3,
+
+              theme: const InteractiveMapTheme(),
+              initialScale: 1,
             ),
           ),
         ],

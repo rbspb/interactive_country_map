@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart' hide Path;
 import 'package:interactive_country_map/src/interactive_map_theme.dart';
 import 'package:interactive_country_map/src/svg/svg_parser.dart';
@@ -7,8 +6,10 @@ import 'package:interactive_country_map/src/svg/svg_parser.dart';
 class MapPainter extends CustomPainter {
   final CountryMap countryMap;
   final Offset? cursorPosition;
+  final Offset? hoverPosition;
   final InteractiveMapTheme theme;
   final String? selectedCode;
+  final String? hoveredCode;
   final bool canSelect;
   final double scale;
 
@@ -18,6 +19,8 @@ class MapPainter extends CustomPainter {
     required this.cursorPosition,
     required this.theme,
     required this.selectedCode,
+    required this.hoverPosition,
+    required this.hoveredCode,
     required this.canSelect,
     required this.scale,
   });
@@ -25,12 +28,17 @@ class MapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paintFiller = Paint()
-      ..color = theme.defaultCountryColor
+      ..color = theme.defaultCountryColor.withAlpha((256 * theme.defaultOpacity).toInt()) 
       ..isAntiAlias = true
       ..style = PaintingStyle.fill;
 
     final selectedPaintFiller = Paint()
-      ..color = theme.defaultSelectedCountryColor
+      ..color = theme.defaultSelectedCountryColor.withAlpha((256 * theme.selectedOpacity).toInt()) 
+      ..isAntiAlias = true
+      ..style = PaintingStyle.fill;
+
+    final hoveredPaintFiller = Paint()
+      ..color = theme.defaultHoveredCountryColor.withAlpha((256 * theme.hoveredOpacity).toInt())
       ..isAntiAlias = true
       ..style = PaintingStyle.fill;
 
@@ -39,11 +47,18 @@ class MapPainter extends CustomPainter {
       ..isAntiAlias = true
       ..style = PaintingStyle.stroke
       ..strokeWidth = theme.borderWidth / scale;
+    
     final selectedPaintBorder = Paint()
       ..color = theme.borderColor
       ..isAntiAlias = true
       ..style = PaintingStyle.stroke
       ..strokeWidth = theme.selectedBorderWidth / scale;
+
+    final hoveredPaintBorder = Paint()
+      ..color = theme.hoveredBorderColor
+      ..isAntiAlias = true
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = theme.hoveredBorderWidth / scale;
 
     if (theme.backgroundColor != null) {
       canvas.drawColor(theme.backgroundColor!, BlendMode.src);
@@ -60,6 +75,9 @@ class MapPainter extends CustomPainter {
       if (_canBeDrawnAsSelected(country.countryCode, path)) {
         canvas.drawPath(path, selectedPaintFiller);
         canvas.drawPath(path, selectedPaintBorder);
+      } else if (_canBeDrawnAsHovered(country.countryCode, path)) {
+        canvas.drawPath(path, hoveredPaintFiller);
+        canvas.drawPath(path, hoveredPaintBorder);
       } else {
         canvas.drawPath(path, paintFiller);
         canvas.drawPath(path, paintBorder);
@@ -73,6 +91,18 @@ class MapPainter extends CustomPainter {
     } else if (canSelect &&
         cursorPosition != null &&
         path.contains(cursorPosition!)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool _canBeDrawnAsHovered(String countryCode, Path path) {
+    if (hoveredCode != null) {
+      return selectedCode == countryCode;
+    } else if (canSelect &&
+        hoverPosition != null &&
+        path.contains(hoverPosition!)) {
       return true;
     }
 

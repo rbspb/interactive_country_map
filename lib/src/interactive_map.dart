@@ -17,6 +17,7 @@ class InteractiveMap extends StatefulWidget {
     MapEntity map, {
     super.key,
     this.onCountrySelected,
+    this.onCountryHovered,
     this.theme = const InteractiveMapTheme(),
     this.loadingBuilder,
     this.minScale = 0.5,
@@ -32,6 +33,7 @@ class InteractiveMap extends StatefulWidget {
     File file, {
     super.key,
     this.onCountrySelected,
+    this.onCountryHovered,
     this.theme = const InteractiveMapTheme(),
     this.loadingBuilder,
     this.minScale = 0.5,
@@ -47,6 +49,7 @@ class InteractiveMap extends StatefulWidget {
     String assetName, {
     super.key,
     this.onCountrySelected,
+    this.onCountryHovered,
     this.theme = const InteractiveMapTheme(),
     this.loadingBuilder,
     this.minScale = 0.5,
@@ -63,6 +66,10 @@ class InteractiveMap extends StatefulWidget {
   /// Called when a country/region is selected. Return the code as defined by the ISO 3166-2
   /// https://en.wikipedia.org/wiki/ISO_3166-2
   final void Function(String code)? onCountrySelected;
+
+  /// Called when a country/region is hovered. Return the code as defined by the ISO 3166-2
+  /// https://en.wikipedia.org/wiki/ISO_3166-2  
+  final void Function(String code)? onCountryHovered;
 
   /// Draw layers of markers over the map
   final List<MarkerGroup> markers;
@@ -165,6 +172,7 @@ class GeographicMap extends StatefulWidget {
     required this.svgData,
     required this.theme,
     this.onCountrySelected,
+    this.onCountryHovered,
     this.selectedCode,
     required this.markers,
     required this.scale,
@@ -173,6 +181,7 @@ class GeographicMap extends StatefulWidget {
   final String svgData;
   final InteractiveMapTheme theme;
   final void Function(String code)? onCountrySelected;
+  final void Function(String code)? onCountryHovered;
   final List<MarkerGroup> markers;
   final double scale;
 
@@ -185,8 +194,10 @@ class GeographicMap extends StatefulWidget {
 class _GeographicMapState extends State<GeographicMap> {
   CountryMap? countryMap;
   Offset? cursorPosition;
+  Offset? hoverPosition;
 
   String? _selectedCode;
+  String? _hoveredCode;
 
   // final _painterKey = GlobalKey<CustomPaint>();
 
@@ -195,7 +206,7 @@ class _GeographicMapState extends State<GeographicMap> {
     super.initState();
 
     _selectedCode = widget.selectedCode;
-
+    
     _parseSvg();
   }
 
@@ -225,7 +236,30 @@ class _GeographicMapState extends State<GeographicMap> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) => GestureDetector(
+      builder: (context, constraints) => MouseRegion(        
+        onHover: (details) {
+          setState(() {
+            hoverPosition = details.localPosition;
+          });
+          // we crawl all the countries and just keep the first containing the cursor position
+          final hoveredCountry = countryMap?.countryPaths
+              .firstWhereOrNull((element) => element.path
+                  .toPath(
+                    maxSize: Size(constraints.maxWidth, constraints.maxHeight),
+                    originalMapSize:
+                        Size(countryMap!.width, countryMap!.height),
+                  )
+                  .contains(details.localPosition));
+
+          if (hoveredCountry != null && widget.onCountryHovered != null) {
+            widget.onCountryHovered!(hoveredCountry.countryCode);
+            setState(() {
+              _hoveredCode = hoveredCountry.countryCode;
+            });
+          }
+        
+        },
+        child: GestureDetector(
         onTapUp: (details) {
           setState(() {
             // we need the cursor local position to detect if the cursor is inside a region or not
@@ -264,8 +298,10 @@ class _GeographicMapState extends State<GeographicMap> {
                 painter: MapPainter(
                   countryMap: countryMap!,
                   cursorPosition: cursorPosition,
+                  hoverPosition: hoverPosition,
                   theme: widget.theme,
                   selectedCode: _selectedCode,
+                  hoveredCode: _hoveredCode,
                   canSelect: widget.onCountrySelected != null,
                   scale: widget.scale,
                 ),
@@ -279,7 +315,7 @@ class _GeographicMapState extends State<GeographicMap> {
             );
           },
         ),
-      ),
+      ))
     );
   }
 }
