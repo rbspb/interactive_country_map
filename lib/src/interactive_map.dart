@@ -24,6 +24,7 @@ class InteractiveMap extends StatefulWidget {
     this.currentScale,
     this.maxScale = 8,
     this.selectedCode,
+    this.hoveredCode,
     this.initialScale,
     this.markers = const [],
   }) : loader = MapEntityLoader(entity: map);
@@ -39,7 +40,8 @@ class InteractiveMap extends StatefulWidget {
     this.minScale = 0.5,
     this.currentScale,
     this.maxScale = 8,
-    this.selectedCode,
+    this.selectedCode,    
+    this.hoveredCode,
     this.initialScale,
     this.markers = const [],
   }) : loader = FileLoader(file: file);
@@ -56,6 +58,7 @@ class InteractiveMap extends StatefulWidget {
     this.currentScale,
     this.maxScale = 8,
     this.selectedCode,
+    this.hoveredCode,
     this.initialScale,
     this.markers = const [],
   }) : loader = AssetLoader(assetName: assetName);
@@ -94,6 +97,9 @@ class InteractiveMap extends StatefulWidget {
 
   /// Code of the selected country/region
   final String? selectedCode;
+
+  /// Code of the selected country/region
+  final String? hoveredCode;
 
   @override
   State<InteractiveMap> createState() => InteractiveMapState();
@@ -155,6 +161,8 @@ class InteractiveMapState extends State<InteractiveMap> {
           svgData: svgData!,
           theme: widget.theme,
           onCountrySelected: widget.onCountrySelected,
+          onCountryHovered: widget.onCountryHovered,
+          hoveredCode: widget.hoveredCode,
           selectedCode: widget.selectedCode,
           markers: widget.markers,
           scale: _scale,
@@ -174,6 +182,7 @@ class GeographicMap extends StatefulWidget {
     this.onCountrySelected,
     this.onCountryHovered,
     this.selectedCode,
+    this.hoveredCode,
     required this.markers,
     required this.scale,
   });
@@ -186,6 +195,7 @@ class GeographicMap extends StatefulWidget {
   final double scale;
 
   final String? selectedCode;
+  final String? hoveredCode;
 
   @override
   State<GeographicMap> createState() => _GeographicMapState();
@@ -206,6 +216,7 @@ class _GeographicMapState extends State<GeographicMap> {
     super.initState();
 
     _selectedCode = widget.selectedCode;
+    _hoveredCode = widget.hoveredCode;
     
     _parseSvg();
   }
@@ -251,13 +262,18 @@ class _GeographicMapState extends State<GeographicMap> {
                   )
                   .contains(details.localPosition));
 
-          if (hoveredCountry != null && widget.onCountryHovered != null) {
+          if (hoveredCountry == null) {
+            setState(() {
+              _hoveredCode = null;
+            });
+          }
+          else if (widget.onCountryHovered != null && _hoveredCode != hoveredCountry.countryCode) {
             widget.onCountryHovered!(hoveredCountry.countryCode);
             setState(() {
               _hoveredCode = hoveredCountry.countryCode;
             });
           }
-        
+
         },
         child: GestureDetector(
         onTapUp: (details) {
